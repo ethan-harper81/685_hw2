@@ -46,11 +46,11 @@ class Transformer(nn.Module):
         self.num_classes = num_classes
         self.num_layers = num_layers
 
-        self.emb = nn.Embedding(self.num_positions, self.d_model)
+        self.emb = nn.Embedding(self.vocab_size, self.d_model)
         self.positional = PositionalEncoding(d_model, num_positions)
         self.transformers = nn.ModuleList([TransformerLayer(d_model, d_internal) for i in range(num_layers)])
         self.linear = nn.Linear(d_model, num_classes) #Final Linear
-        self.softmax = nn.Softmax(dim = 1)
+        self.softmax = nn.LogSoftmax(dim = 1)
 
     def forward(self, indices):
         """
@@ -59,9 +59,7 @@ class Transformer(nn.Module):
         :return: A tuple of the softmax log probabilities (should be a 20x3 matrix) and a list of the attention
         maps you use in your layers (can be variable length, but each should be a 20x20 matrix)
         """
-        print(indices)
-        print(len(indices))
-        print(self.num_positions)
+
         x = self.emb(indices)
 
         x = self.positional(x) # (num_positions, d_model)
@@ -74,7 +72,11 @@ class Transformer(nn.Module):
         
         x = self.linear(x)
 
+        #print(x[1])
+        
         out = self.softmax(x)
+        #print(out[1])
+        #print(out.shape)
 
         return out, attention_maps
 
@@ -127,7 +129,7 @@ class TransformerLayer(nn.Module):
         #matrix multiply queries with values, divide by d_value for stability, softmax array
         intermediate = torch.matmul(querys, keys.T) / np.sqrt(self.d_value) #(seq_len, seq_len)
         #return this I think
-        intermediate = torch.softmax(intermediate) #(seq_len, seq_len)
+        intermediate = torch.softmax(intermediate, dim = 1) #(seq_len, seq_len)
 
         #full attention output
         self_attention = torch.matmul(intermediate, values) # (seq_len, d_internal)
@@ -215,9 +217,9 @@ def train_classifier(args, train, dev):
         random.shuffle(train_set)
         loss_fcn = nn.NLLLoss()
         for ex in train_set:
-            print(ex)
+
             indx = ex.input_tensor
-            print(indx)
+
             outputs = ex.output_tensor
             pred, _ = model(indx)
             loss = loss_fcn(pred, outputs)
@@ -227,14 +229,15 @@ def train_classifier(args, train, dev):
             loss_this_epoch += loss.item()
 
 
+
         # for ex_idx in ex_idxs:
         #     loss = loss_fcn(...) # TODO: Run forward and compute loss
         #     # model.zero_grad()
         #     # loss.backward()
         #     # optimizer.step()
         #     loss_this_epoch += loss.item()
-    
-    print(f"Epoch {t}: loss: {loss_this_epoch}")
+
+        print(f"Epoch {t}: loss: {loss_this_epoch}")
     model.eval()
     return model
 

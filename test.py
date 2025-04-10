@@ -1,11 +1,17 @@
 import torch
+import random
 
-torch.seed()
+x = torch.tensor([ i for i in range(20)])
 
-indx = [1,2,4,5]
+random.shuffle(x)
 
-li = [i for i in range(10)]
+num_positions = len(x)
 
-print(li)
+d_model = 10
 
-print(li[indx])
+emb = torch.nn.Embedding(d_model, num_positions)
+
+y = emb(x)
+
+print(y)
+print(y.shape)

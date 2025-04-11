@@ -79,6 +79,8 @@ if __name__ == '__main__':
     # print(ex.output)
     # print(ex.output_tensor)
 
+    #over_fit(train_bundles)
+
     model = train_classifier(args, train_bundles, dev_bundles)
     # Decodes the first 5 dev examples to display as output
     decode(model, dev_bundles[0:5], do_print=True, do_plot_attn=True)

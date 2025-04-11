@@ -1,17 +1,25 @@
 import torch
 import random
+import numpy as np
 
-x = torch.tensor([ i for i in range(20)])
+torch.manual_seed(0)
 
-random.shuffle(x)
+softmax = torch.nn.Softmax(dim = 1)
 
-num_positions = len(x)
+x = torch.rand([2,3])
 
-d_model = 10
+print(x)
 
-emb = torch.nn.Embedding(d_model, num_positions)
+print(x.shape)
 
-y = emb(x)
+y = softmax(x)
+y1 = torch.nn.functional.softmax(x, dim = 1)
+
+z = torch.sum(y, dim = 1)
+z1 = torch.sum(y1, dim = 1)
 
 print(y)
-print(y.shape)
+print(z)
+
+print(y1)
+print(z1)

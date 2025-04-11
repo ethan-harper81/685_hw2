@@ -102,7 +102,7 @@ class TransformerLayer(nn.Module):
         self.query = nn.Linear(d_model, d_internal)
         self.key = nn.Linear(d_model, d_internal)
 
-        self.d_value = d_model # if value is d_model then use residual, else no residual
+        self.d_value = d_internal # if value is d_model then use residual, else no residual
         self.residual = self.d_value == d_model
 
         # not sure if this is the correct output dim, sources say dif dum for values
@@ -144,6 +144,7 @@ class TransformerLayer(nn.Module):
 
         fc2 = self.fc2(fc1)# (seq_len, d_model)
 
+        #residual
         out = fc2 + input_vecs
 
         return out, self_attention
@@ -190,26 +191,27 @@ def train_classifier(args, train, dev):
     # The following code DOES NOT WORK but can be a starting point for your implementation
     # Some suggested snippets to use:
 
-    
+    train_start = time.process_time()
 
     vocab_size = 27
     num_positions = 20
     num_classes = 3
 
     #hyperparameters
-    d_model = 5
-    d_internal = 10
-    num_layers = 1
-    val = True # sets dev to train on, treating it like validation
+    d_model = 50
+    d_internal = 25
+    num_layers = 2
+    val = False # sets dev to train on, treating it like validation
     train_set = train if not val else dev
 
     model = Transformer(vocab_size, num_positions, d_model, d_internal, num_classes, num_layers)
     model.zero_grad()
     model.train()
-    optimizer = optim.Adam(model.parameters(), lr=1e-4)
+    optimizer = optim.Adam(model.parameters(), lr=2e-4)
 
-    num_epochs = 10
+    num_epochs = 5
     for t in range(0, num_epochs):
+
         loss_this_epoch = 0.0
         random.seed(t)
         # You can use batching if you'd like
@@ -223,6 +225,7 @@ def train_classifier(args, train, dev):
             outputs = ex.output_tensor
             pred, _ = model(indx)
             loss = loss_fcn(pred, outputs)
+            model.zero_grad()
             loss.backward()
             optimizer.step()
 
@@ -237,7 +240,7 @@ def train_classifier(args, train, dev):
         #     # optimizer.step()
         #     loss_this_epoch += loss.item()
 
-        print(f"Epoch {t}: loss: {loss_this_epoch}")
+        print(f"Epoch {t}: loss: {loss_this_epoch / len(train_set)}: Took: {(time.process_time()-train_start) / 60:.02f}")
     model.eval()
     return model
 
@@ -262,12 +265,14 @@ def decode(model: Transformer, dev_examples: List[LetterCountingExample], do_pri
         do_plot_attn = False
     for i in range(0, len(dev_examples)):
         ex = dev_examples[i]
+
         (log_probs, attn_maps) = model.forward(ex.input_tensor)
         predictions = np.argmax(log_probs.detach().numpy(), axis=1)
         if do_print:
             print("INPUT %i: %s" % (i, ex.input))
             print("GOLD %i: %s" % (i, repr(ex.output.astype(dtype=int))))
             print("PRED %i: %s" % (i, repr(predictions)))
+            
         if do_plot_attn:
             for j in range(0, len(attn_maps)):
                 attn_map = attn_maps[j]
@@ -278,7 +283,10 @@ def decode(model: Transformer, dev_examples: List[LetterCountingExample], do_pri
                 ax.xaxis.tick_top()
                 # plt.show()
                 plt.savefig("plots/%i_attns%i.png" % (i, j))
+
         acc = sum([predictions[i] == ex.output[i] for i in range(0, len(predictions))])
         num_correct += acc
         num_total += len(predictions)
     print("Accuracy: %i / %i = %f" % (num_correct, num_total, float(num_correct) / num_total))
+
+
